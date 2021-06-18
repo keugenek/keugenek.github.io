@@ -1,0 +1,317 @@
+<head>
+<style>
+:root {
+  --grid-cols: 1;
+  --grid-rows: 1;
+}
+
+#container {
+  display: grid;
+  grid-gap: 1em;
+  grid-gap: 1px 1px;
+  grid-template-rows: repeat(var(--grid-rows), 1fr);
+  grid-template-columns: repeat(var(--grid-cols), 1fr);
+  grid-auto-columns: 20px;
+  grid-auto-rows: 20px;
+  max-width: 20px;
+  max-height: 20px; 
+}
+
+.grid-item {
+  padding: 1em;
+  border: 1px solid #ddd;
+
+  display: flex;
+  justify-content: center;
+  align-content: center;
+  flex-direction: column;
+  
+  text-overflow: ellipsis;
+  overflow: visible;
+  white-space: pre-wrap;
+}
+
+.grid-item:hover {
+  overflow: visible;
+}
+
+div:focus {
+    outline: 1px solid blue;
+}
+
+.selectedItem{border: 2px dashed #c0ffee;}
+
+#input {
+    -moz-appearance: textfield;
+    -webkit-appearance: textfield;
+    border: 1px solid darkgray;
+    height: 20px;    
+    width: 50px;    
+}
+
+</style>
+
+<script type="text/javascript">
+
+function makeRows(rows, cols) {
+  const container = document.getElementById("container");
+
+  container.style.setProperty('--grid-rows', rows);
+  container.style.setProperty('--grid-cols', cols);
+  for (c = 0; c < (rows * cols); c++) {
+    let cell = document.createElement("div");
+    cell.innerText = ' ';
+    cell.tabIndex = -1;
+    container.appendChild(cell).className = "grid-item";
+  };
+};
+
+//Add click event for any child div of div = grid
+function getGridElementsPosition(index) {
+  const gridEl = document.getElementById("container");
+
+  // our indexes are zero-based but gridColumns are 1-based, so subtract 1
+  let offset = Number(window.getComputedStyle(gridEl.children[0]).gridColumnStart) - 1; 
+
+  // if we haven't specified the first child's grid column, then there is no offset
+  if (isNaN(offset)) {
+    offset = 0;
+  }
+  const colCount = window.getComputedStyle(gridEl).gridTemplateColumns.split(" ").length;
+
+  const rowPosition = Math.floor((index + offset) / colCount);
+  const colPosition = (index + offset) % colCount;
+
+  //Return an object with properties row and column
+  return { row: rowPosition, column: colPosition };
+}
+
+function getNodeIndex(elm) {
+  var c = elm.parentNode.children;
+    i = 0;
+  for (; i < c.length; i++) if (c[i] == elm) return i;
+}
+
+let selectedNode = null;
+let selectedNodeIndex = null;
+
+function endEditingText(elm) {
+      var c = elm.parentNode.children;
+      console.log(c);
+      var text = "";
+      for (i = 0; i < c.length; i++) 
+         if (c[i].classList.contains('textInput')) {
+            text += c[i].value + ' ';
+         }
+      elm.parentNode.innerHTML = text;
+      focusNode(selectedNode, false);
+}
+
+function editElementText(elm) {
+      let text = document.createElement("textarea");
+      text.classList.add('textInput');
+      text.cols = 40; 
+      text.rows = 3;
+      let temp = elm.innerText;
+      elm.innerHTML = "";
+      text.value = temp;
+      elm.appendChild(text);
+      text.focus();
+
+    text.onkeydown = (e) => {
+       if (e.ctrlKey && e.keyCode === 13) 
+       	   endEditingText(e.target); 
+    };
+}
+
+function addClickEventsToGridItems() {
+  let gridItems = document.getElementsByClassName("grid-item");
+  for (let i = 0; i < gridItems.length; i++) {
+    gridItems[i].onclick = (e) => {
+      selectedNodeIndex = getNodeIndex(e.target);
+      selectedNode = getGridElementsPosition(selectedNodeIndex);
+    };
+
+    gridItems[i].ondblclick = (e) => { editElementText(e.target); };
+    gridItems[i].onkeydown = (e) => { 
+       if (!e.ctrlKey && e.keyCode === 13) editElementText(e.target); 
+       //if (e.keyCode === 27) endEditingText(e.target); 
+    };
+  }
+};
+
+function getNode(position) {
+  const gridEl = document.getElementById("container");
+  const colCount = window.getComputedStyle(gridEl).gridTemplateColumns.split(" ").length;
+  let index = position.column + colCount * position.row;
+  return document.getElementsByClassName("grid-item")[index];
+}
+
+function focusNode(position, select) {
+   let gridEl = getNode(position);
+   gridEl.focus();
+   if (select)
+   	gridEl.classList.toggle('selectedItem');  
+}
+
+function expandToSelection(elm) {
+  var c = elm.children;
+  let r1=0; let r2=0;
+  let c1=0; let c2=0;
+  for (i = 0; i < c.length; i++) { 
+	if (c[i].classList.Contains('selectedItem')) { 
+        }
+  }
+}
+
+function cleanCell(pos) {
+   let newNode = getNode(pos);
+   newNode.innerHTML = "";
+   newNode.style.background = "white";
+}
+
+function moveCellTo(oldPos, newPos) {
+   let oldNode = getNode(oldPos);
+   let newNode = getNode(newPos);
+   newNode.innerHTML = oldNode.innerHTML;
+   newNode.style.background = oldNode.style.background;
+   cleanCell(oldPos);
+}
+
+let buffer = null;
+
+function download(filename, text) {
+ var element = document.createElement('a');
+ element.setAttribute('href', 'data:text/plain;charset=utf-8,' + 
+ encodeURIComponent(text));
+ element.setAttribute('download', filename);
+
+  element.style.display = 'none';
+  document.body.appendChild(element);
+
+  element.click();
+
+  document.body.removeChild(element);
+}
+
+window.addEventListener("keydown", function (event) {
+  if (event.defaultPrevented) {
+    return; // Do nothing if the event was already processed
+  }
+
+  let isShift = !!event.shiftKey
+  let isCtrl = !!event.ctrlKey
+  switch (event.key) {
+    case "s":
+        if (isCtrl) {
+           download('document.html',document.innerHTML);
+        }
+        break;
+    case "o":
+        if (isCtrl) {
+           var input = document.createElement('input');
+           input.type = 'file';
+           input.click();
+           input.onchange = e => { 
+
+            // getting a hold of the file reference
+            var file = e.target.files[0]; 
+
+            // setting up the reader
+            var reader = new FileReader();
+            reader.readAsText(file,'UTF-8');
+
+            // here we tell the reader what to do when it's done reading...
+            reader.onload = readerEvent => {
+               var content = readerEvent.target.result; // this is the content!
+               document.innerHTML = content;
+            }
+           }
+        }
+        break;
+    case "c":
+        if (isCtrl) {
+           buffer = getNode(selectedNode);
+        } else 
+        { 
+          let gridEl = getNode(selectedNode);
+	  gridEl.style.backgroundColor = "lightgreen";
+        } 
+        break;
+    case "v":
+        if (isCtrl) {
+           let node = getNode(selectedNode);
+           node.style.background = buffer.style.background;
+           node.innerHTML = buffer.innerHTML;
+        } 
+        break;
+    case "m": // IE/Edge specific value
+        mergeSelection(); 
+        break;
+    case "Down": // IE/Edge specific value
+    case "ArrowDown": {
+      // Do something for "down arrow" key press.
+           let newSelection = { row: selectedNode.row + 1, column: selectedNode.column };
+           if (isCtrl)
+              moveCellTo(selectedNode, newSelection);
+           selectedNode = newSelection;
+           focusNode(selectedNode, isShift);
+        }
+	break;
+    case "Up": // IE/Edge specific value
+    case "ArrowUp": {
+      // Do something for "up arrow" key press.
+        let newSelection = { row: selectedNode.row - 1, column: selectedNode.column };
+        if (isCtrl)
+           moveCellTo(selectedNode, newSelection);
+        selectedNode = newSelection;
+        focusNode(selectedNode, isShift);
+      }
+      break;
+    case "Left": // IE/Edge specific value
+    case "ArrowLeft": {
+      // Do something for "left arrow" key press.
+        let newSelection = { row: selectedNode.row, column: selectedNode.column - 1};
+        if (isCtrl)
+           moveCellTo(selectedNode, newSelection);
+        selectedNode = newSelection;
+        focusNode(selectedNode, isShift);
+      }
+      break;
+    case "Right": // IE/Edge specific value
+    case "ArrowRight": {
+      // Do something for "right arrow" key press.
+        let newSelection = { row: selectedNode.row, column: selectedNode.column + 1};
+        if (isCtrl)
+           moveCellTo(selectedNode, newSelection);
+        selectedNode = newSelection;
+        focusNode(selectedNode, isShift);
+      }
+      break;
+    //case "Enter":
+      // Do something for "enter" or "return" key press.
+      //selectedNode.column += 1;
+      //focusNode(selectedNode);
+      //break;
+    case "Esc": // IE/Edge specific value
+    case "Escape":
+      // Do something for "esc" key press.
+      {
+        cleanCell(selectedNode);
+      }
+      break;
+    default:
+      return; // Quit when this doesn't handle the key event.
+  }
+
+  // Cancel the default action to avoid it being handled twice
+  event.preventDefault();
+}, true);
+
+</script>
+
+</head>
+<body onload="makeRows(100, 100);addClickEventsToGridItems();" >
+<div id="container">
+</div>
+</body>
